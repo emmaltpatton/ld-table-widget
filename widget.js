@@ -593,23 +593,39 @@ const insideJotform = isInIframe && typeof window.JFCustomWidget !== "undefined"
     }
   }
 
-  // Entry
-  try {
-    if (insideJotform && typeof JFCustomWidget.subscribe === "function") {
-      JFCustomWidget.subscribe("ready", () => {
-        log("JFCustomWidget ready");
-        init().catch(e => log("init error", e));
-      });
-    } else {
-      // Standalone mode: run immediately
-      document.addEventListener("DOMContentLoaded", () => {
-        log("Standalone mode");
-        init().catch(e => log("init error", e));
-      });
-    }
-  } catch (e) {
-    log("bootstrap error", e);
+
+// ---- Entry (robust bootstrap with fallback) ----
+try {
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    init().catch(e => log("init error", e));
+  };
+
+  if (insideJotform && typeof JFCustomWidget?.subscribe === "function") {
+    // Jotform path
+    JFCustomWidget.subscribe("ready", () => {
+      log("JFCustomWidget ready");
+      start();
+    });
+
+    // Fallback: if not actually inside a Jotform iframe, still start
+    setTimeout(() => { if (!started) start(); }, 800);
+  } else {
+    // Standalone path
+    document.addEventListener("DOMContentLoaded", () => {
+      log("Standalone mode");
+      start();
+    });
   }
+} catch (e) {
+  log("bootstrap error", e);
+  // Final fallback
+  document.addEventListener("DOMContentLoaded", () => init().catch(err => log("init error", err)));
+}
+
 })();
+
 
 
