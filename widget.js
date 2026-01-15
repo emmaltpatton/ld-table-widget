@@ -12,8 +12,7 @@
   /************  Mode detection & helpers  ************/
 
 const isInIframe = window.self !== window.top;
-const insideJotform =
-  isInIframe && typeof window.JFCustomWidget !== "undefined";
+const insideJotform = isInIframe && typeof window.JFCustomWidget !== "undefined";
 
 
   function log(...args) {
@@ -612,4 +611,5 @@ const insideJotform =
     log("bootstrap error", e);
   }
 })();
+
 
