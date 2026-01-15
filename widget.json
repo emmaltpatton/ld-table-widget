@@ -1,57 +1,72 @@
 
 {
-  "name": "L&D Table – Question, Single Choice, Date",
-  "description": "Table with read-only questions, single-choice responses, and auto-dated completion. Supports CSV upload, per-row choices, codes, and reload.",
+  "name": "Learning & Development Table",
+  "description": "A dynamic, CSV-powered L&D evaluation widget with read-only questions, single-choice responses, auto-dated completion, fallback questions, and per-row codes.",
   "url": "https://emmaltpatton.github.io/ld-table-widget/index.html",
   "iconUrl": "https://emmaltpatton.github.io/ld-table-widget/icon-128.png",
   "platform": "iframe",
   "width": 900,
-  "height": 380,
-  "version": "1.3.0",
+  "height": 420,
+  "version": "2.0.0",
 
   "settings": [
+
+    /* --------------------------
+       CSV SOURCE
+    --------------------------- */
+    {
+      "type": "header",
+      "label": "CSV Source"
+    },
     {
       "name": "csvFile",
       "label": "Upload CSV File",
       "type": "file",
-      "fileType": "text/csv"
+      "fileType": "csv"
     },
     {
       "name": "csvUrl",
       "label": "CSV URL (optional)",
       "type": "text",
-      "placeholder": "https://..."
+      "placeholder": "https://example.com/questions.csv"
     },
     {
       "name": "csvText",
-      "label": "CSV (inline as text)",
+      "label": "Inline CSV (optional)",
       "type": "textarea",
-      "placeholder": "Question,Choices,Code\nExample question,\"Yes|No\",A1"
+      "placeholder": "Question,Choices,Code\nQ1,\"Yes|No\",A1"
     },
     {
       "name": "csvHasHeader",
-      "label": "CSV has header row",
+      "label": "CSV includes a header row",
       "type": "checkbox",
       "defaultValue": true
     },
 
+    /* --------------------------
+       COLUMN MAPPING
+    --------------------------- */
+    {
+      "type": "header",
+      "label": "Column Mapping"
+    },
     {
       "name": "csvQuestionColumn",
-      "label": "Question Column (header or index)",
+      "label": "Question column (header name or index)",
       "type": "text",
       "defaultValue": "Question"
     },
     {
       "name": "csvChoicesColumn",
-      "label": "Choices Column (header or index, optional)",
+      "label": "Choices column (header name or index)",
       "type": "text",
       "defaultValue": "Choices"
     },
-
     {
       "name": "csvChoicesDelimiter",
       "label": "Choices delimiter",
-      "type": "text",
+      "type": "dropdown",
+      "options": ["|", ",", ";", "/", ":"],
       "defaultValue": "|"
     },
     {
@@ -59,3 +74,94 @@
       "label": "Code column (optional)",
       "type": "text",
       "defaultValue": "Code"
+    },
+    {
+      "name": "csvCacheBuster",
+      "label": "Bypass cache when loading CSV",
+      "type": "checkbox",
+      "defaultValue": true
+    },
+
+    /* --------------------------
+       TABLE APPEARANCE
+    --------------------------- */
+    {
+      "type": "header",
+      "label": "Table Appearance"
+    },
+    {
+      "name": "tableTitle",
+      "label": "Table title",
+      "type": "text",
+      "defaultValue": "Learning & Development Evaluation"
+    },
+    {
+      "name": "colQuestionHeader",
+      "label": "Question column label",
+      "type": "text",
+      "defaultValue": "Question"
+    },
+    {
+      "name": "colChoiceHeader",
+      "label": "Response column label",
+      "type": "text",
+      "defaultValue": "Response"
+    },
+    {
+      "name": "colDateHeader",
+      "label": "Date column label",
+      "type": "text",
+      "defaultValue": "Date"
+    },
+
+    /* --------------------------
+       BEHAVIOR
+    --------------------------- */
+    {
+      "type": "header",
+      "label": "Behavior"
+    },
+    {
+      "name": "choices",
+      "label": "Global fallback choices",
+      "type": "text",
+      "defaultValue": "Yes, No, N/A"
+    },
+    {
+      "name": "enforceRequired",
+      "label": "Require a response for every row",
+      "type": "checkbox"
+    },
+    {
+      "name": "restrictMaxToday",
+      "label": "Prevent future dates",
+      "type": "checkbox",
+      "defaultValue": true
+    },
+    {
+      "name": "updateDateOnChange",
+      "label": "Auto-set date when response changes",
+      "type": "checkbox"
+    },
+    {
+      "name": "showReloadButton",
+      "label": "Show Reload button",
+      "type": "checkbox",
+      "defaultValue": true
+    },
+
+    /* --------------------------
+       FALLBACK QUESTIONS
+    --------------------------- */
+    {
+      "type": "header",
+      "label": "Fallback Questions"
+    },
+    {
+      "name": "questions",
+      "label": "Questions (newline or JSON array)",
+      "type": "textarea",
+      "defaultValue": "Access Employee Portal within PageUp\nComplete Workplace Behaviour training\nReview HSE Essentials procedures"
+    }
+  ]
+}
