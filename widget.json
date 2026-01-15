@@ -1,167 +1,44 @@
 
 {
-  "name": "Learning & Development Table",
-  "description": "Enterprise-grade L&D evaluation widget supporting CSV-driven questions, configurable response options, and structured completion tracking.",
-  "url": "https://emmaltpatton.github.io/ld-table-widget/index.html",
-  "iconUrl": "https://emmaltpatton.github.io/ld-table-widget/icon-128.png",
-  "platform": "iframe",
+  "name": "Status Table (Rich HTML + Single Choice + Date)",
+  "description": "Three-column status tracker with rich HTML in the first column, a consistent single-choice field per row, and an auto-updating/back-datable date column.",
+  "icon": "https://emmaltpatton.github.io/status-table-widget/assets/icon-status-table.png",
+  "type": "iframe",
+  "url": "https://emmaltpatton.github.io/status-table-widget/public/index.html",
   "width": 900,
-  "height": 420,
-  "version": "3.0.0",
+  "height": 520,
+  "defaults": {
+    "FirstColumnLabel": "Item / Requirement",
+    "SecondColumnLabel": "Status",
+    "ThirdColumnLabel": "Date",
+    "ChoiceOptions": "Not started\nIn progress\nCompleted",
+    "DateFormat": "YYYY-MM-DD",
+    "AllowBackdate": true,
+    "ThemeColor": "#0f3b5f",
+    "RowHTML_Defaults": "<b>Policy induction</b><br><i>Read and acknowledge</i>\nDevice setup & VPN\nCreate LMS account & enrol in core modules",
+    "CSVSource": "",
+    "RemoteOptionsURL": "",
+    "APIAuthToken": "",
+    "ExternalCSS": "",
+    "KV_StatusColor": "Not started:#6c757d;In progress:#0d6efd;Completed:#198754"
+  },
+  "properties": [
+    { "name": "FirstColumnLabel",  "label": "First column label",   "type": "Text" },
+    { "name": "SecondColumnLabel", "label": "Second column label",  "type": "Text" },
+    { "name": "ThirdColumnLabel",  "label": "Third column label",   "type": "Text" },
 
-  "settings": [
+    { "name": "ChoiceOptions",     "label": "Single-choice options (one per line)", "type": "Textarea" },
+    { "name": "DateFormat",        "label": "Date format", "type": "Dropdown",
+      "options": ["YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY"] },
+    { "name": "AllowBackdate",     "label": "Allow backdating of dates", "type": "Toggle" },
 
-    /* ======================================
-       DATA SOURCE
-       ====================================== */
-    {
-      "type": "header",
-      "label": "Data Source"
-    },
-    {
-      "name": "csvFile",
-      "label": "Upload CSV",
-      "type": "file",
-      "fileType": "csv"
-    },
-    {
-      "name": "csvUrl",
-      "label": "CSV URL (optional)",
-      "type": "text",
-      "placeholder": "https://example.com/questions.csv"
-    },
-    {
-      "name": "csvText",
-      "label": "Inline CSV (optional)",
-      "type": "textarea",
-      "placeholder": "Question,Choices,Code\nExample,\"Yes|No\",A1"
-    },
-    {
-      "name": "csvHasHeader",
-      "label": "CSV has header row",
-      "type": "checkbox",
-      "defaultValue": true
-    },
+    { "name": "RowHTML_Defaults",  "label": "Seed rows (Column 1 HTML, one row per line)", "type": "Textarea" },
+    { "name": "CSVSource",         "label": "Upload CSV (overrides Seed rows)", "type": "File Upload" },
 
-    /* ======================================
-       COLUMN CONFIGURATION
-       ====================================== */
-    {
-      "type": "header",
-      "label": "Column Configuration"
-    },
-    {
-      "name": "csvQuestionColumn",
-      "label": "Question column",
-      "type": "text",
-      "defaultValue": "Question"
-    },
-    {
-      "name": "csvChoicesColumn",
-      "label": "Choices column",
-      "type": "text",
-      "defaultValue": "Choices"
-    },
-    {
-      "name": "csvChoicesDelimiter",
-      "label": "Choices delimiter",
-      "type": "dropdown",
-      "options": ["|", ",", ";", "/", ":"],
-      "defaultValue": "|"
-    },
-    {
-      "name": "csvCodeColumn",
-      "label": "Code column (optional)",
-      "type": "text",
-      "defaultValue": "Code"
-    },
-    {
-      "name": "csvCacheBuster",
-      "label": "Bypass CSV caching",
-      "type": "checkbox",
-      "defaultValue": true
-    },
-
-    /* ======================================
-       TABLE SETTINGS
-       ====================================== */
-    {
-      "type": "header",
-      "label": "Table Settings"
-    },
-    {
-      "name": "tableTitle",
-      "label": "Table title",
-      "type": "text",
-      "defaultValue": "Learning & Development Evaluation"
-    },
-    {
-      "name": "colQuestionHeader",
-      "label": "Question header",
-      "type": "text",
-      "defaultValue": "Question"
-    },
-    {
-      "name": "colChoiceHeader",
-      "label": "Response header",
-      "type": "text",
-      "defaultValue": "Response"
-    },
-    {
-      "name": "colDateHeader",
-      "label": "Date header",
-      "type": "text",
-      "defaultValue": "Date"
-    },
-
-    /* ======================================
-       BEHAVIOUR
-       ====================================== */
-    {
-      "type": "header",
-      "label": "Behaviour"
-    },
-    {
-      "name": "choices",
-      "label": "Default response choices",
-      "type": "text",
-      "defaultValue": "Yes, No, N/A"
-    },
-    {
-      "name": "enforceRequired",
-      "label": "Require all responses",
-      "type": "checkbox"
-    },
-    {
-      "name": "restrictMaxToday",
-      "label": "Prevent future dates",
-      "type": "checkbox",
-      "defaultValue": true
-    },
-    {
-      "name": "updateDateOnChange",
-      "label": "Auto-set date on change",
-      "type": "checkbox"
-    },
-    {
-      "name": "showReloadButton",
-      "label": "Show Reload button",
-      "type": "checkbox",
-      "defaultValue": true
-    },
-
-    /* ======================================
-       FALLBACK QUESTIONS
-       ====================================== */
-    {
-      "type": "header",
-      "label": "Fallback Questions"
-    },
-    {
-      "name": "questions",
-      "label": "Questions (newline or JSON array)",
-      "type": "textarea",
-      "defaultValue": "Access Employee Portal within PageUp\nComplete Workplace Behaviour training\nReview HSE Essentials procedures"
-    }
+    { "name": "RemoteOptionsURL",  "label": "Remote options URL (JSON array of strings)", "type": "External" },
+    { "name": "APIAuthToken",      "label": "API Auth Token (Bearer ...)", "type": "Secure Text" },
+    { "name": "KV_StatusColor",    "label": "Key/Value: status->color (e.g. A:#hex;B:#hex)", "type": "Key Value Pair" },
+    { "name": "ThemeColor",        "label": "Brand color", "type": "Color" },
+    { "name": "ExternalCSS",       "label": "Custom CSS URL", "type": "External" }
   ]
 }
