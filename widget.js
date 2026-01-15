@@ -10,7 +10,11 @@
   "use strict";
 
   /************  Mode detection & helpers  ************/
-  const insideJotform = typeof window.JFCustomWidget !== "undefined";
+
+const isInIframe = window.self !== window.top;
+const insideJotform =
+  isInIframe && typeof window.JFCustomWidget !== "undefined";
+
 
   function log(...args) {
     if (window.__LD_DEBUG__) {
@@ -608,3 +612,4 @@
     log("bootstrap error", e);
   }
 })();
+
