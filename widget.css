@@ -1,0 +1,46 @@
+
+:root {
+  --brand: #0f3b5f;
+  --border: #d0d7de;
+  --text: #0a2540;
+  --muted: #6b7280;
+  --row-alt: #f8fafc;
+  --badge-bg: #eef2f7;
+  --badge-fg: #0a2540;
+  --focus: #0d6efd33;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; color: var(--text); background: #fff; }
+
+.p-wrapper { padding: 12px 14px 18px; }
+.p-header h1 { margin: 0; font-size: 16px; color: var(--brand); letter-spacing: .2px; }
+.p-sub { margin: 4px 0 12px; color: var(--muted); }
+
+.p-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+
+.p-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.p-table thead th {
+  text-align: left; padding: 10px 12px; background: #f4f6f8; color: #0a2540; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 13px;
+}
+.p-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.p-table tbody tr:nth-child(even) td { background: var(--row-alt); }
+
+.p-col1 { max-width: 560px; }
+.p-col1 a { color: #0d6efd; text-decoration: none; }
+.p-col1 a:hover { text-decoration: underline; }
+.p-col1 ul, .p-col1 ol { margin: 6px 0 0 18px; }
+
+.p-select { width: 100%; min-width: 200px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.p-date { width: 100%; max-width: 180px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+
+.p-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  background: var(--badge-bg); color: var(--badge-fg); font-size: 12px; margin-left: 6px;
+}
+
+.p-footer { margin-top: 8px; }
+.p-helper { color: var(--muted); font-size: 12px; }
+
+.p-table :focus { outline: 3px solid var(--focus); outline-offset: 1px; }
