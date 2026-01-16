@@ -8,6 +8,7 @@
   "width": 900,
   "height": 520,
   "defaults": {
+    "WidgetTitle": "Status Table",
     "FirstColumnLabel": "Item / Requirement",
     "SecondColumnLabel": "Status",
     "ThirdColumnLabel": "Date",
@@ -23,6 +24,13 @@
     "KV_StatusColor": "Not started:#6c757d;In progress:#0d6efd;Completed:#198754"
   },
   "properties": [
+    {
+      "name": "WidgetTitle",
+      "label": "Widget Title",
+      "type": "Text",
+      "placeholder": "Status Table",
+      "description": "Title displayed above the table"
+    },
     {
       "name": "FirstColumnLabel",
       "label": "First column label",
