@@ -2,13 +2,12 @@
 {
   "name": "Status Table (Rich HTML + Single Choice + Date)",
   "description": "Three-column status tracker with rich HTML in the first column, single-choice buttons in the second column, and an auto-updating/back-datable date column.",
-  "icon": "https://emmaltpatton.github.io/status-table-widget/icon-128.png",
+  "icon": "https://emmaltpatton.github.io/status-table-widget/icon-status-table.png",
   "type": "iframe",
   "url": "https://emmaltpatton.github.io/status-table-widget/index.html",
   "width": 900,
   "height": 520,
   "defaults": {
-    "WidgetTitle": "Status Table",
     "FirstColumnLabel": "Item / Requirement",
     "SecondColumnLabel": "Status",
     "ThirdColumnLabel": "Date",
@@ -24,13 +23,6 @@
     "KV_StatusColor": "Not started:#6c757d;In progress:#0d6efd;Completed:#198754"
   },
   "properties": [
-    {
-      "name": "WidgetTitle",
-      "label": "Widget Title",
-      "type": "Text",
-      "placeholder": "Status Table",
-      "description": "Title displayed above the table"
-    },
     {
       "name": "FirstColumnLabel",
       "label": "First column label",
@@ -114,4 +106,3 @@
     }
   ]
 }
-
