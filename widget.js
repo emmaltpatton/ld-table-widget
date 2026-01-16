@@ -151,40 +151,42 @@
       td1.innerHTML = r.col1_html;
       tr.appendChild(td1);
 
-      // Column 2: radio buttons
-      const td2 = document.createElement('td');
-      const radioGroup = document.createElement('div');
-      radioGroup.className = 'p-radio-group';
+    
+// Column 2: single-choice buttons (radio)
+const td2 = document.createElement('td');
+const radioGroup = document.createElement('div');
+radioGroup.className = 'p-radio-group';
 
-      OPTIONS.forEach(opt => {
-        const label = document.createElement('label');
-        label.className = 'p-radio-label';
+OPTIONS.forEach(opt => {
+  const label = document.createElement('label');
+  label.className = 'p-radio-label';
 
-        const radio = document.createElement('input');
-        radio.type = 'radio';
-        radio.name = `status-${r.id}`;
-        radio.value = opt;
-        radio.className = 'p-radio';
+  const radio = document.createElement('input');
+  radio.type = 'radio';
+  radio.name = `status-${r.id}`; // unique per row
+  radio.value = opt;
+  radio.className = 'p-radio';
 
-        if (r.status === opt) radio.checked = true;
+  if (r.status === opt) radio.checked = true;
 
-        radio.addEventListener('change', () => {
-          r.status = opt;
-          if (r.status && COLORS[r.status]) {
-            label.style.color = COLORS[r.status];
-          }
-          r.date = todayISO();
-          dateInput.value = r.date;
-          pushDraft();
-        });
+  radio.addEventListener('change', () => {
+    r.status = opt;
+    if (r.status && COLORS[r.status]) {
+      label.style.color = COLORS[r.status];
+    }
+    // Auto-date when selected
+    r.date = todayISO();
+    dateInput.value = r.date;
+    pushDraft();
+  });
 
-        label.appendChild(radio);
-        label.appendChild(document.createTextNode(opt));
-        radioGroup.appendChild(label);
-      });
+  label.appendChild(radio);
+  label.appendChild(document.createTextNode(opt));
+  radioGroup.appendChild(label);
+});
 
-      td2.appendChild(radioGroup);
-      tr.appendChild(td2);
+td2.appendChild(radioGroup);
+tr.appendChild(td2);
 
       // Column 3: date
       const td3 = document.createElement('td');
@@ -301,3 +303,4 @@
     }
   });
 })();
+
