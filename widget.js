@@ -1,9 +1,9 @@
 
 /* ========================================================================
- * Status Table Widget — Jotform + Standalone compatible
- * - Populates Column 1 from tasks (array or multi-line string)
- * - Reads Jotform Widget parameters via JFCustomWidget
- * - Live-updates Column 1 on settings change (populate)
+ * Status Table Widget — Standalone + Jotform Custom Widget
+ * - Column 1 is populated from "Seed rows" (one per line)
+ * - Works on GitHub and inside Jotform (JFCustomWidget)
+ * - Live-updates Column 1 when "Seed rows" changes in the settings panel
  * ===================================================================== */
 
 /* ---------------------------
@@ -63,13 +63,11 @@ function buildStatusRadios(rowIndex, options) {
   return group;
 }
 
-function buildDatePicker(rowIndex, format /* not enforced here */) {
+function buildDatePicker(rowIndex /*, format */) {
   const input = document.createElement('input');
   input.type = 'date';
   input.className = 'date-input';
   input.id = `date-${rowIndex}`;
-  // NOTE: Native <input type="date"> ignores custom format strings.
-  // If you later want a custom format, swap to a JS date picker.
   return input;
 }
 
@@ -81,13 +79,13 @@ function renderStatusTable(state) {
   const tbody = byId('stw-body');
   if (!tbody) return;
 
-  // Rebuild thead labels if present
+  // Update headers if provided
   const thead = document.querySelector('.status-table thead');
   if (thead) {
     const ths = thead.querySelectorAll('th');
-    if (ths[0] && firstColLabel) ths[0].textContent = firstColLabel;
+    if (ths[0] && firstColLabel)  ths[0].textContent = firstColLabel;
     if (ths[1] && secondColLabel) ths[1].textContent = secondColLabel;
-    if (ths[2] && thirdColLabel)  ths[2].textContent  = thirdColLabel;
+    if (ths[2] && thirdColLabel)  ths[2].textContent = thirdColLabel;
   }
 
   tbody.innerHTML = '';
@@ -95,12 +93,12 @@ function renderStatusTable(state) {
   tasks.forEach((task, i) => {
     const tr = document.createElement('tr');
 
-    // Column 1 — initially empty (we'll populate with real text right after)
+    // Column 1 — initially empty (filled immediately after)
     const td1 = document.createElement('td');
     td1.className = 'p-col1';
     tr.appendChild(td1);
 
-    // Column 2 — radio group (can be overridden by ChoiceOptions)
+    // Column 2 — status radios
     const td2 = document.createElement('td');
     td2.appendChild(buildStatusRadios(i, choiceOptions));
     tr.appendChild(td2);
@@ -187,12 +185,11 @@ function observeLateRows(state) {
  * --------------------------*/
 const State = {
   tasks: [],
-  // Optional settings (read from Jotform if provided)
   firstColLabel: 'Task',
   secondColLabel: 'Status',
   thirdColLabel: 'Date',
   choiceOptions: ['Complete', 'Not Applicable'],
-  dateFormat: 'YYYY-MM-DD' // Info only; <input type="date"> uses browser locale
+  dateFormat: 'YYYY-MM-DD' // hint only; native input uses browser locale
 };
 
 /* ---------------------------
@@ -214,13 +211,11 @@ window.StatusTableWidget = {
     if (settings.SecondColumnLabel) State.secondColLabel = String(settings.SecondColumnLabel);
     if (settings.ThirdColumnLabel)  State.thirdColLabel  = String(settings.ThirdColumnLabel);
 
-    // Single-choice options (one per line)
     if (settings.ChoiceOptions) {
       const opts = toArrayLines(settings.ChoiceOptions);
       if (opts.length) State.choiceOptions = opts;
     }
 
-    // Date format hint (not enforced by native input)
     if (settings.DateFormat) {
       State.dateFormat = String(settings.DateFormat);
     }
@@ -257,17 +252,16 @@ window.StatusTableWidget = {
   }
 };
 
-
 /* ========================================================================
    JOTFORM WIDGET INTEGRATION (robust / waits for API / logs events)
    - Works in Jotform and Standalone (GitHub).
    - Dynamically updates Column 1 when "Seed rows" changes.
    ===================================================================== */
 
-/* ---- Lightweight debug overlay (remove later if you like) ---- */
+/* ---- Lightweight debug overlay (turn off with Debug.on = false) ---- */
 const Debug = {
   node: null,
-  on: true, // set to false to disable overlay
+  on: true,
   init() {
     if (this.node || !this.on) return;
     this.node = document.createElement('div');
@@ -282,16 +276,14 @@ const Debug = {
   show(objOrMsg) {
     if (!this.on) return;
     this.init();
-    const text =
-      typeof objOrMsg === 'string' ? objOrMsg : JSON.stringify(objOrMsg, null, 2);
-    if (this.node) this.node.textContent = text;
+    const msg = typeof objOrMsg === 'string' ? objOrMsg : JSON.stringify(objOrMsg, null, 2);
+    if (this.node) this.node.textContent = msg;
     try { console.log('[Widget Debug]', objOrMsg); } catch(e) {}
   }
 };
 
 /* ---- Helpers to read settings and wire events ---- */
 function initFromSettings(settings) {
-  // Your init already supports both array and multi-line string.
   window.StatusTableWidget.init(settings || {});
   try { window.JFCustomWidget && window.JFCustomWidget.sendData({ valid: true }); } catch(e){}
   Debug.show({ event: 'init', settings });
@@ -302,7 +294,6 @@ function updateFromSettings(settings) {
   if (typeof settings.RowHTML_Defaults !== 'undefined') {
     window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
   }
-  // (Optional live updates for other fields you’ve defined)
   if (typeof settings.FirstColumnLabel  !== 'undefined'
    || typeof settings.SecondColumnLabel !== 'undefined'
    || typeof settings.ThirdColumnLabel  !== 'undefined') {
@@ -321,7 +312,6 @@ function updateFromSettings(settings) {
 
 /* ---- Wire up Jotform when available; fall back to standalone ---- */
 (function boot() {
-  // If we’re *really* in Jotform, JFCustomWidget will appear shortly after load.
   let attempts = 0;
   const MAX_ATTEMPTS = 120; // ~6s at 50ms
   const iv = setInterval(() => {
@@ -333,7 +323,7 @@ function updateFromSettings(settings) {
       clearInterval(iv);
       Debug.show('Mode: Jotform (JFCustomWidget detected)');
 
-      // Best practice: wait for "ready" then pull settings.
+      // Prefer "ready", but also attempt immediate fetch (some envs differ)
       try {
         window.JFCustomWidget.subscribe('ready', function() {
           try {
@@ -349,7 +339,6 @@ function updateFromSettings(settings) {
         console.warn('subscribe("ready") failed:', e);
       }
 
-      // Fallback: also try immediately (some environments don’t emit "ready")
       try {
         window.JFCustomWidget.getWidgetSetting(function(settings) {
           Debug.show({ event: 'getWidgetSetting (immediate)', settings });
@@ -359,8 +348,7 @@ function updateFromSettings(settings) {
         console.warn('getWidgetSetting (immediate) failed:', e);
       }
 
-      // Updates after clicking "Update Widget" in the settings panel.
-      // Not all environments send this, but when they do, we live-update Column 1.
+      // Live updates after clicking "Update Widget" in settings pane
       ['populate', 'settingsChanged', 'valueChanged'].forEach(evt => {
         try {
           window.JFCustomWidget.subscribe(evt, function(payload) {
@@ -368,7 +356,7 @@ function updateFromSettings(settings) {
             updateFromSettings(payload);
           });
         } catch (e) {
-          // ignore unsupported events
+          /* some events may not exist on all tenants */
         }
       });
 
@@ -379,7 +367,7 @@ function updateFromSettings(settings) {
       clearInterval(iv);
       Debug.show('Mode: Standalone (GitHub) — JFCustomWidget not detected');
 
-      // Standalone: seed from a textarea or a global `TASKS` if present.
+      // Standalone: seed from a textarea or a global TASKS if present
       const seedTextArea = document.querySelector('[data-stw="seed-rows"]');
       const initialTasks = seedTextArea
         ? seedTextArea.value
