@@ -258,63 +258,139 @@ window.StatusTableWidget = {
 };
 
 
-/* -------------------------------------------------------------
-   JOTFORM WIDGET INTEGRATION
-------------------------------------------------------------- */
-(function integrateWithJotformIfPresent() {
-  if (typeof window.JFCustomWidget === 'undefined') {
-    console.log("Running in standalone mode (GitHub), not Jotform.");
-    return;
+/* ========================================================================
+   JOTFORM WIDGET INTEGRATION (robust / waits for API / logs events)
+   - Works in Jotform and Standalone (GitHub).
+   - Dynamically updates Column 1 when "Seed rows" changes.
+   ===================================================================== */
+
+/* ---- Lightweight debug overlay (remove later if you like) ---- */
+const Debug = {
+  node: null,
+  on: true, // set to false to disable overlay
+  init() {
+    if (this.node || !this.on) return;
+    this.node = document.createElement('div');
+    this.node.style.cssText = `
+      position: fixed; right: 8px; bottom: 8px; z-index: 2147483647;
+      background: rgba(12,35,64,.92); color: #fff; font: 12px/1.35 system-ui, sans-serif;
+      padding: 8px 10px; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.25);
+      max-width: 360px; white-space: pre-wrap; pointer-events: none;
+    `;
+    document.body.appendChild(this.node);
+  },
+  show(objOrMsg) {
+    if (!this.on) return;
+    this.init();
+    const text =
+      typeof objOrMsg === 'string' ? objOrMsg : JSON.stringify(objOrMsg, null, 2);
+    if (this.node) this.node.textContent = text;
+    try { console.log('[Widget Debug]', objOrMsg); } catch(e) {}
   }
+};
 
-  // 1. Get initial settings from Jotform when widget loads
-  JFCustomWidget.getWidgetSetting(function(settings) {
-    console.log("Initial settings from Jotform:", settings);
+/* ---- Helpers to read settings and wire events ---- */
+function initFromSettings(settings) {
+  // Your init already supports both array and multi-line string.
+  window.StatusTableWidget.init(settings || {});
+  try { window.JFCustomWidget && window.JFCustomWidget.sendData({ valid: true }); } catch(e){}
+  Debug.show({ event: 'init', settings });
+}
 
-    // Seed rows come through RowHTML_Defaults
-    const seed = settings.RowHTML_Defaults || "";
-
-    window.StatusTableWidget.init({
-      tasks: seed,
-      FirstColumnLabel: settings.FirstColumnLabel,
-      SecondColumnLabel: settings.SecondColumnLabel,
-      ThirdColumnLabel: settings.ThirdColumnLabel,
-      ChoiceOptions: settings.ChoiceOptions,
-      DateFormat: settings.DateFormat
+function updateFromSettings(settings) {
+  if (!settings) return;
+  if (typeof settings.RowHTML_Defaults !== 'undefined') {
+    window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
+  }
+  // (Optional live updates for other fields you’ve defined)
+  if (typeof settings.FirstColumnLabel  !== 'undefined'
+   || typeof settings.SecondColumnLabel !== 'undefined'
+   || typeof settings.ThirdColumnLabel  !== 'undefined') {
+    window.StatusTableWidget.setLabels({
+      first:  settings.FirstColumnLabel,
+      second: settings.SecondColumnLabel,
+      third:  settings.ThirdColumnLabel
     });
+  }
+  if (typeof settings.ChoiceOptions !== 'undefined') {
+    window.StatusTableWidget.setChoiceOptions(settings.ChoiceOptions);
+  }
+  try { window.JFCustomWidget && window.JFCustomWidget.sendData({ valid: true }); } catch(e){}
+  Debug.show({ event: 'update', settings });
+}
 
-    // Tell Jotform the widget has loaded
-    JFCustomWidget.sendData({ valid: true });
-  });
+/* ---- Wire up Jotform when available; fall back to standalone ---- */
+(function boot() {
+  // If we’re *really* in Jotform, JFCustomWidget will appear shortly after load.
+  let attempts = 0;
+  const MAX_ATTEMPTS = 120; // ~6s at 50ms
+  const iv = setInterval(() => {
+    attempts++;
 
-  // 2. Listen for updates when user clicks "Update Widget"
-  JFCustomWidget.subscribe("populate", function(settings) {
-    console.log("Updated settings from Jotform:", settings);
+    if (typeof window.JFCustomWidget !== 'undefined'
+        && typeof window.JFCustomWidget.getWidgetSetting === 'function') {
 
-    // Dynamic Column 1 update
-    if (settings.RowHTML_Defaults !== undefined) {
-      window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
-    }
+      clearInterval(iv);
+      Debug.show('Mode: Jotform (JFCustomWidget detected)');
 
-    // Optional: update labels & radios if needed
-    if (settings.FirstColumnLabel !== undefined ||
-        settings.SecondColumnLabel !== undefined ||
-        settings.ThirdColumnLabel !== undefined) {
-      window.StatusTableWidget.setLabels({
-        first: settings.FirstColumnLabel,
-        second: settings.SecondColumnLabel,
-        third: settings.ThirdColumnLabel
+      // Best practice: wait for "ready" then pull settings.
+      try {
+        window.JFCustomWidget.subscribe('ready', function() {
+          try {
+            window.JFCustomWidget.getWidgetSetting(function(settings) {
+              Debug.show({ event: 'getWidgetSetting (ready)', settings });
+              initFromSettings(settings);
+            });
+          } catch (e) {
+            console.warn('getWidgetSetting (ready) failed:', e);
+          }
+        });
+      } catch (e) {
+        console.warn('subscribe("ready") failed:', e);
+      }
+
+      // Fallback: also try immediately (some environments don’t emit "ready")
+      try {
+        window.JFCustomWidget.getWidgetSetting(function(settings) {
+          Debug.show({ event: 'getWidgetSetting (immediate)', settings });
+          initFromSettings(settings);
+        });
+      } catch (e) {
+        console.warn('getWidgetSetting (immediate) failed:', e);
+      }
+
+      // Updates after clicking "Update Widget" in the settings panel.
+      // Not all environments send this, but when they do, we live-update Column 1.
+      ['populate', 'settingsChanged', 'valueChanged'].forEach(evt => {
+        try {
+          window.JFCustomWidget.subscribe(evt, function(payload) {
+            Debug.show({ event: evt, payload });
+            updateFromSettings(payload);
+          });
+        } catch (e) {
+          // ignore unsupported events
+        }
       });
+
+      return;
     }
 
-    if (settings.ChoiceOptions !== undefined) {
-      window.StatusTableWidget.setChoiceOptions(settings.ChoiceOptions);
-    }
+    if (attempts >= MAX_ATTEMPTS) {
+      clearInterval(iv);
+      Debug.show('Mode: Standalone (GitHub) — JFCustomWidget not detected');
 
-    // Confirm to Jotform that the widget still validates
-    JFCustomWidget.sendData({ valid: true });
-  });
+      // Standalone: seed from a textarea or a global `TASKS` if present.
+      const seedTextArea = document.querySelector('[data-stw="seed-rows"]');
+      const initialTasks = seedTextArea
+        ? seedTextArea.value
+        : (window.TASKS || []);
+      window.StatusTableWidget.init({ tasks: initialTasks });
+
+      if (seedTextArea) {
+        seedTextArea.addEventListener('input', () => {
+          window.StatusTableWidget.setTasks(seedTextArea.value);
+        });
+      }
+    }
+  }, 50);
 })();
-
-
-
