@@ -137,6 +137,7 @@
 
   // --------- DOM Builders ----------
   function render() {
+    el('#title').textContent = SETTINGS.WidgetTitle || 'Status Table';
     el('#th-col1').textContent = SETTINGS.FirstColumnLabel || 'Item / Requirement';
     el('#th-col2').textContent = SETTINGS.SecondColumnLabel || 'Status';
     el('#th-col3').textContent = SETTINGS.ThirdColumnLabel || 'Date';
@@ -216,9 +217,10 @@
   }
 
   // --------- Jotform integration ----------
-  function initFromSettings() {
+  async function initFromSettings() {
     const name = (k) => JFCustomWidget.getWidgetSetting(k);
     SETTINGS = {
+      WidgetTitle: name('WidgetTitle'),
       FirstColumnLabel: name('FirstColumnLabel'),
       SecondColumnLabel: name('SecondColumnLabel'),
       ThirdColumnLabel: name('ThirdColumnLabel'),
@@ -242,16 +244,34 @@
       document.head.appendChild(link);
     }
 
-    return (async () => {
-      if (SETTINGS.CSVSource) {
+    // ✅ Updated CSV handling
+    if (SETTINGS.CSVSource) {
+      console.log('CSVSource raw:', SETTINGS.CSVSource);
+      let fileUrl = null;
+      try {
+        const parsed = JSON.parse(SETTINGS.CSVSource);
+        if (Array.isArray(parsed) && parsed[0]?.url) {
+          fileUrl = parsed[0].url;
+        } else if (parsed.url) {
+          fileUrl = parsed.url;
+        } else if (typeof parsed === 'string') {
+          fileUrl = parsed;
+        }
+      } catch {
+        fileUrl = SETTINGS.CSVSource;
+      }
+
+      if (fileUrl) {
         try {
-          const res = await fetch(SETTINGS.CSVSource, { credentials: 'omit' });
+          const res = await fetch(fileUrl, { credentials: 'omit' });
           const text = await res.text();
           const arr = csvToRows(text);
           SETTINGS.__csvRows = arr.slice(1).map(r => [r[0] || '']);
-        } catch { SETTINGS.__csvRows = []; }
+        } catch {
+          SETTINGS.__csvRows = [];
+        }
       }
-    })();
+    }
   }
 
   function restoreIfProvided(saved) {
@@ -278,6 +298,7 @@
     await buildOptions();
 
     if (devMode) {
+      if (!SETTINGS.WidgetTitle) SETTINGS.WidgetTitle = "Status Table";
       if (!SETTINGS.FirstColumnLabel) SETTINGS.FirstColumnLabel = "Item / Requirement";
       if (!SETTINGS.SecondColumnLabel) SETTINGS.SecondColumnLabel = "Status";
       if (!SETTINGS.ThirdColumnLabel) SETTINGS.ThirdColumnLabel = "Date";
@@ -301,3 +322,4 @@
     }
   });
 })();
+``
