@@ -257,60 +257,64 @@ window.StatusTableWidget = {
   }
 };
 
+
 /* -------------------------------------------------------------
    JOTFORM WIDGET INTEGRATION
-   - Works only when JFCustomWidget is injected by Jotform.
-   - No effect on GitHub standalone usage.
 ------------------------------------------------------------- */
 (function integrateWithJotformIfPresent() {
   if (typeof window.JFCustomWidget === 'undefined') {
-    // Standalone mode (e.g., GitHub pages) — nothing to do.
+    console.log("Running in standalone mode (GitHub), not Jotform.");
     return;
   }
 
+  // 1. Get initial settings from Jotform when widget loads
+  JFCustomWidget.getWidgetSetting(function(settings) {
+    console.log("Initial settings from Jotform:", settings);
 
-// 1) On load, fetch initial settings from Jotform
-try {
-    JFCustomWidget.getWidgetSetting(function(settings) {
+    // Seed rows come through RowHTML_Defaults
+    const seed = settings.RowHTML_Defaults || "";
 
-        console.log("Settings received from Jotform:", settings);   // <-- ADD THIS
-
-        window.StatusTableWidget.init(settings);
-
-        JFCustomWidget.sendData({ valid: true });
+    window.StatusTableWidget.init({
+      tasks: seed,
+      FirstColumnLabel: settings.FirstColumnLabel,
+      SecondColumnLabel: settings.SecondColumnLabel,
+      ThirdColumnLabel: settings.ThirdColumnLabel,
+      ChoiceOptions: settings.ChoiceOptions,
+      DateFormat: settings.DateFormat
     });
-} catch (e) {
-    console.warn('JFCustomWidget.getWidgetSetting failed:', e);
-}
 
+    // Tell Jotform the widget has loaded
+    JFCustomWidget.sendData({ valid: true });
+  });
 
-  // 2) When user clicks "Update Widget" or settings change in panel
-  try {
-    JFCustomWidget.subscribe('populate', function (settings) {
-      // Update only what changed; for Column 1 we care about RowHTML_Defaults
-      if (settings && typeof settings.RowHTML_Defaults !== 'undefined') {
-        window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
-      }
+  // 2. Listen for updates when user clicks "Update Widget"
+  JFCustomWidget.subscribe("populate", function(settings) {
+    console.log("Updated settings from Jotform:", settings);
 
-      // Optional: support live updates for other fields
-      if (settings && typeof settings.FirstColumnLabel !== 'undefined') {
-        window.StatusTableWidget.setLabels({ first: settings.FirstColumnLabel });
-      }
-      if (settings && typeof settings.SecondColumnLabel !== 'undefined') {
-        window.StatusTableWidget.setLabels({ second: settings.SecondColumnLabel });
-      }
-      if (settings && typeof settings.ThirdColumnLabel !== 'undefined') {
-        window.StatusTableWidget.setLabels({ third: settings.ThirdColumnLabel });
-      }
-      if (settings && typeof settings.ChoiceOptions !== 'undefined') {
-        window.StatusTableWidget.setChoiceOptions(settings.ChoiceOptions);
-      }
+    // Dynamic Column 1 update
+    if (settings.RowHTML_Defaults !== undefined) {
+      window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
+    }
 
-      // Confirm to Jotform the widget is valid after update
-      JFCustomWidget.sendData({ valid: true });
-    });
-  } catch (e) {
-    console.warn('JFCustomWidget.subscribe("populate") failed:', e);
-  }
+    // Optional: update labels & radios if needed
+    if (settings.FirstColumnLabel !== undefined ||
+        settings.SecondColumnLabel !== undefined ||
+        settings.ThirdColumnLabel !== undefined) {
+      window.StatusTableWidget.setLabels({
+        first: settings.FirstColumnLabel,
+        second: settings.SecondColumnLabel,
+        third: settings.ThirdColumnLabel
+      });
+    }
+
+    if (settings.ChoiceOptions !== undefined) {
+      window.StatusTableWidget.setChoiceOptions(settings.ChoiceOptions);
+    }
+
+    // Confirm to Jotform that the widget still validates
+    JFCustomWidget.sendData({ valid: true });
+  });
 })();
+
+
 
