@@ -2,49 +2,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Status Table Widget</title>
-    <link rel="stylesheet" href="widget.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Status Table Widget</title>
+  <link rel="stylesheet" href="widget.css" />
 </head>
-
 <body>
-    <div class="status-table-wrapper">
-        <table class="status-table">
-            <!-- Prevent column 1 from collapsing -->
-            <colgroup>
-                <col style="width: 56%" />
-                <col style="width: 24%" />
-                <col style="width: 20%" />
-            </colgroup>
+  <div class="status-table-wrapper">
+    <table class="status-table">
+      <colgroup>
+        <col style="width:56%"/>
+        <col style="width:24%"/>
+        <col style="width:20%"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="stw-body"></tbody>
+    </table>
+  </div>
 
-            <thead>
-                <tr>
-                    <th>Task</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
+  <!-- Optional: local seed-rows input (for testing outside Jotform) -->
+  <div style="margin-top:16px">
+    <label for="seed-rows"><strong>Seed rows (one per line)</strong></label><br/>
+    <textarea id="seed-rows" data-stw="seed-rows" rows="6" style="width:100%;max-width:560px;">
+Collect Employee’s Name in Pathways
+Send Induction Email
+Issue Logins
+Complete Onboarding Checklist
+Introduce Manager
+    </textarea>
+  </div>
 
-            <tbody id="stw-body">
-                <!-- JS will populate rows -->
-            </tbody>
-        </table>
-    </div>
+  <script src="widget.js"></script>
+  <script>
+    // Initial seed from the textarea (or could be set from external config/Jotform)
+    const initialTasks = (document.getElementById('seed-rows').value || '')
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
 
-    <script src="widget.js"></script>
+    // Boot the widget
+    window.StatusTableWidget.init({ tasks: initialTasks });
 
-    <script>
-        // Your actual list of tasks for Column 1
-        const TASKS = [
-            "Collect Employee’s Name in Pathways",
-            "Send Induction Email",
-            "Issue Logins",
-            "Complete Onboarding Checklist",
-            "Introduce Manager"
-        ];
-
-        window.StatusTableWidget.init({ tasks: TASKS });
-    </script>
+    // Live update: when the textarea changes, push the new tasks to the widget
+    const seed = document.querySelector('[data-stw="seed-rows"]');
+    seed.addEventListener('input', () => {
+      const tasks = seed.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      window.StatusTableWidget.setTasks(tasks);
+    });
+  </script>
 </body>
 </html>
