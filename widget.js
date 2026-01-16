@@ -1,4 +1,11 @@
 
+/* ========================================================================
+ * Status Table Widget — Jotform + Standalone compatible
+ * - Populates Column 1 from tasks (array or multi-line string)
+ * - Reads Jotform Widget parameters via JFCustomWidget
+ * - Live-updates Column 1 on settings change (populate)
+ * ===================================================================== */
+
 /* ---------------------------
  * Utilities
  * --------------------------*/
@@ -20,48 +27,69 @@ function ensureFirstColumnText(tasks, root = document) {
   });
 }
 
+function toArrayLines(maybeString) {
+  return parseSeedRows(maybeString || '');
+}
+
+function byId(id) {
+  return document.getElementById(id);
+}
+
 /* ---------------------------
  * Builders
  * --------------------------*/
-function buildStatusRadios(rowIndex) {
+function buildStatusRadios(rowIndex, options) {
   const group = document.createElement('div');
   group.className = 'radio-group';
 
-  const options = [
-    { id: `complete-${rowIndex}`, label: 'Complete' },
-    { id: `na-${rowIndex}`,       label: 'Not Applicable' }
-  ];
+  const optList = (options && options.length)
+    ? options
+    : ['Complete', 'Not Applicable'];
 
-  options.forEach(opt => {
+  optList.forEach((label, idx) => {
     const wrap = document.createElement('label');
     wrap.className = 'radio-option';
 
     const radio = document.createElement('input');
     radio.type = 'radio';
     radio.name = `status-${rowIndex}`;
-    radio.id = opt.id;
+    radio.id = `status-${rowIndex}-${idx}`;
 
     wrap.appendChild(radio);
-    wrap.appendChild(document.createTextNode(opt.label));
+    wrap.appendChild(document.createTextNode(label));
     group.appendChild(wrap);
   });
 
   return group;
 }
 
-function buildDatePicker(rowIndex) {
+function buildDatePicker(rowIndex, format /* not enforced here */) {
   const input = document.createElement('input');
   input.type = 'date';
   input.className = 'date-input';
   input.id = `date-${rowIndex}`;
+  // NOTE: Native <input type="date"> ignores custom format strings.
+  // If you later want a custom format, swap to a JS date picker.
   return input;
 }
 
 /* ---------------------------
  * Rendering
  * --------------------------*/
-function renderStatusTable(tasks) {
-  const tbody = document.getElementById('stw-body');
+function renderStatusTable(state) {
+  const { tasks, choiceOptions, firstColLabel, secondColLabel, thirdColLabel, dateFormat } = state;
+  const tbody = byId('stw-body');
+  if (!tbody) return;
+
+  // Rebuild thead labels if present
+  const thead = document.querySelector('.status-table thead');
+  if (thead) {
+    const ths = thead.querySelectorAll('th');
+    if (ths[0] && firstColLabel) ths[0].textContent = firstColLabel;
+    if (ths[1] && secondColLabel) ths[1].textContent = secondColLabel;
+    if (ths[2] && thirdColLabel)  ths[2].textContent  = thirdColLabel;
+  }
+
   tbody.innerHTML = '';
 
   tasks.forEach((task, i) => {
@@ -72,14 +100,14 @@ function renderStatusTable(tasks) {
     td1.className = 'p-col1';
     tr.appendChild(td1);
 
-    // Column 2 — radio group
+    // Column 2 — radio group (can be overridden by ChoiceOptions)
     const td2 = document.createElement('td');
-    td2.appendChild(buildStatusRadios(i));
+    td2.appendChild(buildStatusRadios(i, choiceOptions));
     tr.appendChild(td2);
 
     // Column 3 — date picker
     const td3 = document.createElement('td');
-    td3.appendChild(buildDatePicker(i));
+    td3.appendChild(buildDatePicker(i, dateFormat));
     tr.appendChild(td3);
 
     tbody.appendChild(tr);
@@ -93,8 +121,11 @@ function renderStatusTable(tasks) {
  * Update only Column 1 for an existing table body,
  * and add/remove rows if the size changed.
  */
-function applyTasksToExistingTable(tasks) {
-  const tbody = document.getElementById('stw-body');
+function applyTasksToExistingTable(state) {
+  const tbody = byId('stw-body');
+  if (!tbody) return;
+
+  const { tasks, choiceOptions, dateFormat } = state;
   const currentRows = Array.from(tbody.querySelectorAll('tr'));
   const delta = tasks.length - currentRows.length;
 
@@ -108,11 +139,11 @@ function applyTasksToExistingTable(tasks) {
       tr.appendChild(td1);
 
       const td2 = document.createElement('td');
-      td2.appendChild(buildStatusRadios(i));
+      td2.appendChild(buildStatusRadios(i, choiceOptions));
       tr.appendChild(td2);
 
       const td3 = document.createElement('td');
-      td3.appendChild(buildDatePicker(i));
+      td3.appendChild(buildDatePicker(i, dateFormat));
       tr.appendChild(td3);
 
       tbody.appendChild(tr);
@@ -122,7 +153,7 @@ function applyTasksToExistingTable(tasks) {
   // Remove extra rows if tasks shrank
   if (delta < 0) {
     for (let i = 0; i < Math.abs(delta); i++) {
-      tbody.removeChild(tbody.lastElementChild);
+      if (tbody.lastElementChild) tbody.removeChild(tbody.lastElementChild);
     }
   }
 
@@ -136,8 +167,8 @@ function applyTasksToExistingTable(tasks) {
 /* ---------------------------
  * Observer: keep Column 1 safe if host mutates DOM
  * --------------------------*/
-function observeLateRows(tasks) {
-  const tbody = document.getElementById('stw-body');
+function observeLateRows(state) {
+  const tbody = byId('stw-body');
   if (!tbody) return;
 
   const obs = new MutationObserver(muts => {
@@ -145,27 +176,57 @@ function observeLateRows(tasks) {
     muts.forEach(m => {
       if (m.type === 'childList' && m.addedNodes.length > 0) added = true;
     });
-    if (added) ensureFirstColumnText(tasks, tbody);
+    if (added) ensureFirstColumnText(state.tasks, tbody);
   });
 
   obs.observe(tbody, { childList: true, subtree: true });
 }
 
 /* ---------------------------
- * Public API
+ * Global State
  * --------------------------*/
 const State = {
-  tasks: []
+  tasks: [],
+  // Optional settings (read from Jotform if provided)
+  firstColLabel: 'Task',
+  secondColLabel: 'Status',
+  thirdColLabel: 'Date',
+  choiceOptions: ['Complete', 'Not Applicable'],
+  dateFormat: 'YYYY-MM-DD' // Info only; <input type="date"> uses browser locale
 };
 
+/* ---------------------------
+ * Public API (Standalone-friendly)
+ * --------------------------*/
 window.StatusTableWidget = {
   /**
-   * Initialize with tasks (array or multi-line string).
+   * Initialize with tasks (array or multi-line string) and optional labels/options.
+   * When running under Jotform, init is called with settings from getWidgetSetting().
    */
-  init({ tasks = [] } = {}) {
-    State.tasks = parseSeedRows(tasks);
-    renderStatusTable(State.tasks);
-    observeLateRows(State.tasks);
+  init(settings = {}) {
+    // Accept either { tasks: [...] } or Jotform-style RowHTML_Defaults
+    const seed = settings.RowHTML_Defaults ?? settings.tasks ?? '';
+
+    State.tasks = parseSeedRows(seed);
+
+    // Optional labels/options if provided
+    if (settings.FirstColumnLabel)  State.firstColLabel  = String(settings.FirstColumnLabel);
+    if (settings.SecondColumnLabel) State.secondColLabel = String(settings.SecondColumnLabel);
+    if (settings.ThirdColumnLabel)  State.thirdColLabel  = String(settings.ThirdColumnLabel);
+
+    // Single-choice options (one per line)
+    if (settings.ChoiceOptions) {
+      const opts = toArrayLines(settings.ChoiceOptions);
+      if (opts.length) State.choiceOptions = opts;
+    }
+
+    // Date format hint (not enforced by native input)
+    if (settings.DateFormat) {
+      State.dateFormat = String(settings.DateFormat);
+    }
+
+    renderStatusTable(State);
+    observeLateRows(State);
   },
 
   /**
@@ -174,6 +235,78 @@ window.StatusTableWidget = {
    */
   setTasks(input) {
     State.tasks = parseSeedRows(input);
-    applyTasksToExistingTable(State.tasks);
+    applyTasksToExistingTable(State);
+  },
+
+  /**
+   * Optional helpers if you want to update labels and options live.
+   */
+  setLabels({ first, second, third } = {}) {
+    if (typeof first  === 'string') State.firstColLabel  = first;
+    if (typeof second === 'string') State.secondColLabel = second;
+    if (typeof third  === 'string') State.thirdColLabel  = third;
+    renderStatusTable(State);
+  },
+
+  setChoiceOptions(multiLine) {
+    const opts = toArrayLines(multiLine);
+    if (opts.length) {
+      State.choiceOptions = opts;
+      renderStatusTable(State);
+    }
   }
 };
+
+/* -------------------------------------------------------------
+   JOTFORM WIDGET INTEGRATION
+   - Works only when JFCustomWidget is injected by Jotform.
+   - No effect on GitHub standalone usage.
+------------------------------------------------------------- */
+(function integrateWithJotformIfPresent() {
+  if (typeof window.JFCustomWidget === 'undefined') {
+    // Standalone mode (e.g., GitHub pages) — nothing to do.
+    return;
+  }
+
+  // 1) On load, fetch initial settings from Jotform
+  try {
+    JFCustomWidget.getWidgetSetting(function (settings) {
+      // Example: settings.RowHTML_Defaults contains the "Seed rows" value
+      window.StatusTableWidget.init(settings);
+
+      // Let Jotform know the widget is valid/ready
+      JFCustomWidget.sendData({ valid: true });
+    });
+  } catch (e) {
+    console.warn('JFCustomWidget.getWidgetSetting failed:', e);
+  }
+
+  // 2) When user clicks "Update Widget" or settings change in panel
+  try {
+    JFCustomWidget.subscribe('populate', function (settings) {
+      // Update only what changed; for Column 1 we care about RowHTML_Defaults
+      if (settings && typeof settings.RowHTML_Defaults !== 'undefined') {
+        window.StatusTableWidget.setTasks(settings.RowHTML_Defaults);
+      }
+
+      // Optional: support live updates for other fields
+      if (settings && typeof settings.FirstColumnLabel !== 'undefined') {
+        window.StatusTableWidget.setLabels({ first: settings.FirstColumnLabel });
+      }
+      if (settings && typeof settings.SecondColumnLabel !== 'undefined') {
+        window.StatusTableWidget.setLabels({ second: settings.SecondColumnLabel });
+      }
+      if (settings && typeof settings.ThirdColumnLabel !== 'undefined') {
+        window.StatusTableWidget.setLabels({ third: settings.ThirdColumnLabel });
+      }
+      if (settings && typeof settings.ChoiceOptions !== 'undefined') {
+        window.StatusTableWidget.setChoiceOptions(settings.ChoiceOptions);
+      }
+
+      // Confirm to Jotform the widget is valid after update
+      JFCustomWidget.sendData({ valid: true });
+    });
+  } catch (e) {
+    console.warn('JFCustomWidget.subscribe("populate") failed:', e);
+  }
+})();
